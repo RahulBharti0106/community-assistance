@@ -27,3 +27,29 @@ export async function checkDuplicate(newTitle, newDescription, existingTitle, ex
   
   return data;
 }
+
+export async function getClusterInsight(clusters) {
+  const response = await fetch('/api/cluster-insight', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clusters })
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error('Cluster insight failed: ' + data.error);
+  }
+  return data.insight;
+}
+
+export async function getPriorityRanking(issues) {
+  const response = await fetch('/api/priority-ranking', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ issues })
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error('Priority ranking failed: ' + data.error);
+  }
+  return data.rankings;
+}

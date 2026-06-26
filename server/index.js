@@ -69,6 +69,9 @@ Schema:
       res.status(200).json(parsed);
     } catch (error) {
       console.error('Error analyzing image:', error);
+      if (error.message && error.message.includes('429')) {
+        return res.status(429).json({ error: 'AI analysis quota exceeded. Please try again later.' });
+      }
       res.status(500).json({ error: error.message });
     }
   });
@@ -103,6 +106,95 @@ Return valid JSON only — no markdown, no explanation:
       res.status(200).json(parsed);
     } catch (error) {
       console.error('Error checking duplicate:', error);
+      if (error.message && error.message.includes('429')) {
+        return res.status(429).json({ error: 'AI quota exceeded. Please try again later.' });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/cluster-insight', async (req, res) => {
+    try {
+      const aiModel = getModel();
+      const { clusters } = req.body;
+      
+      if (!clusters || !Array.isArray(clusters) || clusters.length === 0) {
+        return res.status(400).json({ error: 'clusters array is required' });
+      }
+
+      const filteredClusters = clusters.filter(c => c.issues && c.issues.length >= 2);
+      if (filteredClusters.length === 0) {
+        return res.status(200).json({ insight: null });
+      }
+
+      const clusterSummary = filteredClusters.map(c => `Area: ${c.area} — ${c.issues.length} issues: ${c.issues.map(i => i.title).join(', ')}`).join('\n');
+
+      const prompt = `You are an AI analyst for a civic issue reporting platform.
+
+The following geographic clusters of reported issues have been detected:
+${clusterSummary}
+
+Identify the most significant pattern across these clusters. Look for:
+- Multiple issues of the same category in one area suggesting infrastructure failure
+- Mixed categories in one area suggesting neglect
+- Severity escalation patterns
+
+Respond in 2–3 sentences written for a public civic dashboard. Be specific about location and issue type. Do not use bullet points. Do not use markdown.`;
+
+      const result = await aiModel.generateContent(prompt);
+      const responseText = result.response.text();
+      
+      res.status(200).json({ insight: responseText.trim() });
+    } catch (error) {
+      console.error('Error in cluster-insight:', error);
+      if (error.message && error.message.includes('429')) {
+        return res.status(429).json({ error: 'AI quota exceeded. Please try again later.' });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/priority-ranking', async (req, res) => {
+    try {
+      const aiModel = getModel();
+      const { issues } = req.body;
+      
+      if (!issues || !Array.isArray(issues) || issues.length === 0) {
+        return res.status(400).json({ error: 'issues array is required' });
+      }
+
+      const limitedIssues = issues.slice(0, 20);
+      const issueList = limitedIssues.map((i, idx) => `${idx + 1}. [${i.severity}] ${i.title} — ${i.upvotes} upvotes — reported ${i.created_at} — ${i.urgency_reason}`).join('\n');
+
+      const prompt = `You are a priority triage system for civic infrastructure issues.
+
+Open issues requiring attention:
+${issueList}
+
+Select the top 3 issues that require the most urgent action. Consider:
+- Critical severity outweighs moderate and minor
+- High upvote count signals community impact
+- Older unresolved issues should be prioritised over recent ones
+- Infrastructure failures (water, electrical) outweigh cosmetic issues
+
+Return valid JSON only — no markdown, no explanation:
+[
+  { "rank": 1, "id": "issue_id", "reason": "one sentence explaining why this is top priority" },
+  { "rank": 2, "id": "issue_id", "reason": "one sentence" },
+  { "rank": 3, "id": "issue_id", "reason": "one sentence" }
+]`;
+
+      const result = await aiModel.generateContent(prompt);
+      const responseText = result.response.text();
+      const cleanJson = responseText.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      
+      res.status(200).json({ rankings: parsed });
+    } catch (error) {
+      console.error('Error in priority-ranking:', error);
+      if (error.message && error.message.includes('429')) {
+        return res.status(429).json({ error: 'AI quota exceeded. Please try again later.' });
+      }
       res.status(500).json({ error: error.message });
     }
   });
