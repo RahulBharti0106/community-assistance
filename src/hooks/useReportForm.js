@@ -68,6 +68,20 @@ export default function useReportForm() {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleGetLocation = () => {
+    getCurrentPosition()
+      .then(pos => {
+        const { latitude, longitude } = pos.coords;
+        return reverseGeocode(latitude, longitude);
+      })
+      .then(address => {
+        setForm(prev => ({ ...prev, address }));
+      })
+      .catch((err) => {
+        setError("Failed to get location: " + (err.message || "Please allow location access"));
+      });
+  };
+
   const runDuplicateCheck = async (newIssueId, newTitle, newDescription, lat, lng) => {
     if (lat === null || lng === null) return;
     
@@ -117,6 +131,7 @@ export default function useReportForm() {
       const { error: uploadError } = await supabase.storage.from('issue-images').upload(filename, imageFile);
       
       if (uploadError) {
+        console.error('Upload Error:', uploadError);
         setError("Image upload failed. Please try again.");
         setIsSubmitting(false);
         return;
@@ -192,6 +207,7 @@ export default function useReportForm() {
     form,
     handleImageChange,
     handleFieldChange,
+    handleGetLocation,
     handleSubmit,
     resetForm
   };

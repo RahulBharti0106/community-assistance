@@ -1,3 +1,42 @@
-export default function IssueCard() {
-  return <div>Issue Card</div>;
+function timeAgo(dateStr) {
+  const seconds = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+export default function IssueCard({ issue, onSelect }) {
+  return (
+    <div 
+      onClick={() => onSelect(issue)}
+      className="flex gap-3 p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
+    >
+      {issue.image_url && (
+        <img src={issue.image_url} alt={issue.title} className="w-16 h-16 rounded object-cover flex-shrink-0" />
+      )}
+      <div className="flex-1 min-w-0 flex flex-col justify-between">
+        <div>
+          <h3 className="font-bold text-slate-800 truncate text-sm">{issue.title}</h3>
+          <div className="flex gap-2 items-center mt-1">
+            <span className="text-[10px] font-medium bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded uppercase">
+              {issue.category?.replace('_', ' ')}
+            </span>
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${issue.severity === 'critical' ? 'bg-red-500' : issue.severity === 'moderate' ? 'bg-amber-500' : 'bg-green-500'}`}></span>
+          </div>
+        </div>
+        <div className="text-xs text-slate-500 truncate mt-1">
+          {issue.address || 'Unknown location'}
+        </div>
+      </div>
+      <div className="flex flex-col items-end justify-between text-xs text-slate-500 flex-shrink-0">
+        <div className="bg-slate-100 px-2 py-1 rounded text-slate-600 font-medium">
+          👍 {issue.upvotes || 0}
+        </div>
+        <div>
+          {timeAgo(issue.created_at)}
+        </div>
+      </div>
+    </div>
+  );
 }

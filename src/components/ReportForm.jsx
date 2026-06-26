@@ -12,6 +12,7 @@ export default function ReportForm() {
     form,
     handleImageChange,
     handleFieldChange,
+    handleGetLocation,
     handleSubmit,
     resetForm
   } = useReportForm();
@@ -163,13 +164,22 @@ export default function ReportForm() {
 
       <div className="mb-4">
         <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-        <input 
-          type="text" 
-          value={form.address} 
-          onChange={e => handleFieldChange('address', e.target.value)} 
-          placeholder="Detecting your location…"
-          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        />
+        <div className="flex gap-2">
+          <input 
+            type="text" 
+            value={form.address} 
+            onChange={e => handleFieldChange('address', e.target.value)} 
+            placeholder="Address or location description"
+            className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+          <button 
+            type="button"
+            onClick={handleGetLocation}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+          >
+            📍 Detect
+          </button>
+        </div>
       </div>
 
       <button 
