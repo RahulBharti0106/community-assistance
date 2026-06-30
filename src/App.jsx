@@ -6,13 +6,26 @@ import Dashboard from './components/Dashboard.jsx';
 
 export default function App() {
   const [activeScreen, setActiveScreen] = useState('map');
+  const [flyToIssue, setFlyToIssue] = useState(null);
 
   return (
     <div className="flex flex-col h-screen">
       <div className="flex-grow overflow-auto">
-        {activeScreen === 'map' && <IssueMap />}
+        {activeScreen === 'map' && (
+          <IssueMap 
+            flyToIssue={flyToIssue} 
+            onFlyComplete={() => setFlyToIssue(null)} 
+          />
+        )}
         {activeScreen === 'report' && <ReportForm />}
-        {activeScreen === 'feed' && <IssueFeed />}
+        {activeScreen === 'feed' && (
+          <IssueFeed 
+            onShowOnMap={(issue) => {
+              setFlyToIssue(issue);
+              setActiveScreen('map');
+            }} 
+          />
+        )}
         {activeScreen === 'dashboard' && <Dashboard />}
       </div>
       <nav className="flex justify-around bg-white border-t p-4 pb-6">

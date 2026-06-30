@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import supabase from '../lib/supabase';
 import { analyzeIssueImage, checkDuplicate } from '../lib/gemini';
-import { getCurrentPosition, reverseGeocode } from '../lib/geo';
+import { getCurrentPosition, reverseGeocode, forwardGeocode } from '../lib/geo';
 import { compressImage } from '../lib/imageUtils';
 
 export default function useReportForm() {
@@ -13,6 +13,17 @@ export default function useReportForm() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [duplicateFound, setDuplicateFound] = useState(false);
   const [error, setError] = useState(null);
+
+  // FIX: use a ref for coords so handleAddressBlur always reads the latest value
+  // useState has stale closure issues when read inside async callbacks
+  const coordsRef = useRef({ lat: null, lng: null });
+  const [coords, setCoords] = useState({ lat: null, lng: null });
+
+  const updateCoords = (lat, lng) => {
+    coordsRef.current = { lat, lng };
+    setCoords({ lat, lng });
+  };
+
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -44,9 +55,11 @@ export default function useReportForm() {
       setIsAnalyzing(true);
       setError(null);
 
+      // FIX: use updateCoords instead of setCoords
       getCurrentPosition()
         .then(pos => {
           const { latitude, longitude } = pos.coords;
+          updateCoords(latitude, longitude);
           return reverseGeocode(latitude, longitude);
         })
         .then(address => {
@@ -66,12 +79,18 @@ export default function useReportForm() {
 
   const handleFieldChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
+    // FIX: when user edits address field, reset coords via ref too
+    if (field === 'address') {
+      updateCoords(null, null);
+    }
   };
 
   const handleGetLocation = () => {
     getCurrentPosition()
       .then(pos => {
         const { latitude, longitude } = pos.coords;
+        // FIX: use updateCoords
+        updateCoords(latitude, longitude);
         return reverseGeocode(latitude, longitude);
       })
       .then(address => {
@@ -80,6 +99,20 @@ export default function useReportForm() {
       .catch((err) => {
         setError("Failed to get location: " + (err.message || "Please allow location access"));
       });
+  };
+
+  const handleAddressBlur = async () => {
+    if (!form.address || form.address.trim().length < 5) return;
+    
+    // FIX: read from ref, not state — ref is always current, no stale closure
+    if (coordsRef.current.lat && coordsRef.current.lng) return;
+
+    const result = await forwardGeocode(form.address);
+    if (result) {
+      updateCoords(result.lat, result.lng);
+      // Optionally update address to the clean Nominatim display name
+      // setForm(prev => ({ ...prev, address: result.displayName }));
+    }
   };
 
   const runDuplicateCheck = async (newIssueId, newTitle, newDescription, lat, lng) => {
@@ -140,21 +173,23 @@ export default function useReportForm() {
       const { data: publicUrlData } = supabase.storage.from('issue-images').getPublicUrl(filename);
       const publicUrl = publicUrlData.publicUrl;
 
-      let latitude = null;
-      let longitude = null;
-      try {
-        const pos = await getCurrentPosition();
-        latitude = pos.coords.latitude;
-        longitude = pos.coords.longitude;
-      } catch (geoErr) {
-        // ignore
+      // FIX: read from ref for submit too — guaranteed to be latest
+      let finalLat = coordsRef.current.lat;
+      let finalLng = coordsRef.current.lng;
+
+      if (!finalLat || !finalLng) {
+        const geocoded = await forwardGeocode(form.address);
+        if (geocoded) {
+          finalLat = geocoded.lat;
+          finalLng = geocoded.lng;
+        }
       }
 
       const { data: insertedIssue, error: insertError } = await supabase.from('issues').insert([{
         ...form,
         image_url: publicUrl,
-        lat: latitude,
-        lng: longitude,
+        lat: finalLat,
+        lng: finalLng,
         status: 'reported'
       }]).select().single();
 
@@ -167,7 +202,7 @@ export default function useReportForm() {
       setIsSubmitting(false);
       setSubmitSuccess(true);
 
-      runDuplicateCheck(insertedIssue.id, form.title, form.description, latitude, longitude);
+      runDuplicateCheck(insertedIssue.id, form.title, form.description, finalLat, finalLng);
 
     } catch (err) {
       setError("Failed to submit report. Please try again.");
@@ -185,6 +220,8 @@ export default function useReportForm() {
     setSubmitSuccess(false);
     setDuplicateFound(false);
     setError(null);
+    // FIX: reset ref too
+    updateCoords(null, null);
     setForm({
       title: '',
       description: '',
@@ -208,6 +245,7 @@ export default function useReportForm() {
     handleImageChange,
     handleFieldChange,
     handleGetLocation,
+    handleAddressBlur,
     handleSubmit,
     resetForm
   };

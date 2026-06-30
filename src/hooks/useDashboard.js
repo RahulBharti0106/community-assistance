@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import supabase from '../lib/supabase';
-import { getClusterInsight, getPriorityRanking } from '../lib/gemini';
+import { getClusterInsight, getTrendInsight } from '../lib/gemini';
 
 export default function useDashboard() {
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [clusterInsight, setClusterInsight] = useState(null);
-  const [priorityRankings, setPriorityRankings] = useState([]);
+  const [trendInsight, setTrendInsight] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
 
@@ -31,20 +31,20 @@ export default function useDashboard() {
   const runAIAnalysis = async (fetchedIssues) => {
     if (fetchedIssues.length < 2) {
       setClusterInsight(null);
-      setPriorityRankings([]);
+      setTrendInsight(null);
       return;
     }
 
     setAiLoading(true);
     setAiError(null);
 
+    // Cluster grouping — unchanged from before
     const cellKey = (issue) => {
       if (!issue.lat || !issue.lng) return null;
       const latCell = Math.floor(issue.lat / 0.01);
       const lngCell = Math.floor(issue.lng / 0.01);
       return `${latCell}_${lngCell}`;
     };
-
     const grouped = new Map();
     fetchedIssues.forEach(issue => {
       const key = cellKey(issue);
@@ -53,7 +53,6 @@ export default function useDashboard() {
         grouped.get(key).push(issue);
       }
     });
-
     const clusters = Array.from(grouped.entries())
       .filter(([_, issuesInCluster]) => issuesInCluster.length >= 2)
       .map(([key, issuesInCluster]) => ({
@@ -61,19 +60,27 @@ export default function useDashboard() {
         issues: issuesInCluster.map(i => ({ title: i.title, category: i.category, severity: i.severity }))
       }));
 
-    const [insightResult, rankingResult] = await Promise.allSettled([
+    // Trend data — compute fresh here too (cannot reference categoryTrends from outside since this runs on mount before issues state settles)
+    const now = Date.now();
+    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const fourteenDaysAgo = now - 14 * 24 * 60 * 60 * 1000;
+    const trendsForAI = ['pothole', 'streetlight', 'water_leak', 'waste', 'other'].map(category => ({
+      category,
+      last7Days: fetchedIssues.filter(i => i.category === category && new Date(i.created_at).getTime() >= sevenDaysAgo).length,
+      previous7Days: fetchedIssues.filter(i => i.category === category && new Date(i.created_at).getTime() >= fourteenDaysAgo && new Date(i.created_at).getTime() < sevenDaysAgo).length
+    }));
+    const criticalOpenCount = fetchedIssues.filter(i => i.severity === 'critical' && i.status !== 'resolved').length;
+    const totalOpenCount = fetchedIssues.filter(i => i.status !== 'resolved').length;
+
+    const [insightResult, trendResult] = await Promise.allSettled([
       getClusterInsight(clusters),
-      getPriorityRanking(fetchedIssues.filter(i => i.status !== 'resolved').slice(0, 20))
+      getTrendInsight(trendsForAI, criticalOpenCount, totalOpenCount)
     ]);
 
-    if (insightResult.status === 'fulfilled') {
-      setClusterInsight(insightResult.value);
-    }
-    if (rankingResult.status === 'fulfilled') {
-      setPriorityRankings(rankingResult.value);
-    }
-    if (insightResult.status === 'rejected' || rankingResult.status === 'rejected') {
-      setAiError("AI insights unavailable. Showing data only.");
+    if (insightResult.status === 'fulfilled') setClusterInsight(insightResult.value);
+    if (trendResult.status === 'fulfilled') setTrendInsight(trendResult.value);
+    if (insightResult.status === 'rejected' || trendResult.status === 'rejected') {
+      setAiError("Some insights unavailable. Showing data only.");
     }
     setAiLoading(false);
   };
@@ -98,6 +105,7 @@ export default function useDashboard() {
     })()
   };
 
+  const CATEGORY_LIST = ['pothole', 'streetlight', 'water_leak', 'waste', 'other'];
   const CATEGORY_LABELS = {
     pothole: 'Pothole', streetlight: 'Streetlight',
     water_leak: 'Water Leak', waste: 'Waste', other: 'Other'
@@ -112,16 +120,16 @@ export default function useDashboard() {
     }]
   };
 
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
+  const last7DaysData = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     return d.toISOString().split('T')[0];
   });
   const dailyChartData = {
-    labels: last7Days.map(d => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })),
+    labels: last7DaysData.map(d => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })),
     datasets: [{
       label: 'Issues Reported',
-      data: last7Days.map(day => issues.filter(i => i.created_at.startsWith(day)).length),
+      data: last7DaysData.map(day => issues.filter(i => i.created_at.startsWith(day)).length),
       backgroundColor: '#3b82f6',
       borderRadius: 6
     }]
@@ -132,9 +140,30 @@ export default function useDashboard() {
     .sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0))
     .slice(0, 5);
 
-  const rankedIssues = priorityRankings
-    .map(r => ({ ...r, issue: issues.find(i => i.id === r.id) }))
-    .filter(r => r.issue);
+  const last14Days = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (13 - i));
+    return d.toISOString().split('T')[0];
+  });
+
+  const CATEGORY_LINE_COLORS = {
+    pothole: '#ef4444', streetlight: '#f59e0b',
+    water_leak: '#3b82f6', waste: '#22c55e', other: '#8b5cf6'
+  };
+
+  const categoryTrendChartData = {
+    labels: last14Days.map(d => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })),
+    datasets: CATEGORY_LIST.map(category => ({
+      label: CATEGORY_LABELS[category],
+      data: last14Days.map(day =>
+        issues.filter(i => i.category === category && i.created_at.startsWith(day)).length
+      ),
+      borderColor: CATEGORY_LINE_COLORS[category],
+      backgroundColor: CATEGORY_LINE_COLORS[category],
+      tension: 0.3,
+      pointRadius: 2
+    }))
+  };
 
   return {
     loading,
@@ -143,8 +172,9 @@ export default function useDashboard() {
     metrics,
     categoryChartData,
     dailyChartData,
+    categoryTrendChartData,
     topUpvoted,
     clusterInsight,
-    rankedIssues
+    trendInsight
   };
 }

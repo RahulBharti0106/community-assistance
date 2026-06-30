@@ -41,15 +41,13 @@ export async function getClusterInsight(clusters) {
   return data.insight;
 }
 
-export async function getPriorityRanking(issues) {
-  const response = await fetch('/api/priority-ranking', {
+export async function getTrendInsight(categoryTrends, criticalOpenCount, totalOpenCount) {
+  const response = await fetch('/api/trend-insight', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ issues })
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error('Priority ranking failed: ' + data.error);
-  }
-  return data.rankings;
+    body: JSON.stringify({ categoryTrends, criticalOpenCount, totalOpenCount })
+  })
+  const data = await response.json()
+  if (!response.ok) throw new Error('Trend insight failed: ' + data.error)
+  return data.insight
 }

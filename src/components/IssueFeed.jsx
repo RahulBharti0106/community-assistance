@@ -3,7 +3,7 @@ import useIssues from '../hooks/useIssues';
 import IssueCard from './IssueCard';
 import IssueModal from './IssueModal';
 
-export default function IssueFeed() {
+export default function IssueFeed({ onShowOnMap }) {
   const {
     issues,
     loading,
@@ -56,7 +56,19 @@ export default function IssueFeed() {
 
       <div className="flex flex-col gap-3 pb-20">
         {sortedIssues.map(issue => (
-          <IssueCard key={issue.id} issue={issue} onSelect={selectIssue} />
+          <div key={issue.id} className="flex flex-col gap-1">
+            <IssueCard issue={issue} onSelect={selectIssue} />
+            {issue.lat && issue.lng && (
+              <div className="flex justify-end pr-1">
+                <button
+                  onClick={() => onShowOnMap(issue)}
+                  className="text-[11px] font-medium border border-slate-300 text-slate-700 px-2.5 py-1 rounded-md hover:bg-slate-50 flex items-center gap-1 bg-white shadow-sm"
+                >
+                  🗺 Show on Map
+                </button>
+              </div>
+            )}
+          </div>
         ))}
       </div>
 

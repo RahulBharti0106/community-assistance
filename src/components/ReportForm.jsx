@@ -13,6 +13,7 @@ export default function ReportForm() {
     handleImageChange,
     handleFieldChange,
     handleGetLocation,
+    handleAddressBlur,
     handleSubmit,
     resetForm
   } = useReportForm();
@@ -169,6 +170,7 @@ export default function ReportForm() {
             type="text" 
             value={form.address} 
             onChange={e => handleFieldChange('address', e.target.value)} 
+            onBlur={handleAddressBlur}
             placeholder="Address or location description"
             className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />

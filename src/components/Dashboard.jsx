@@ -1,8 +1,8 @@
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
-import { Doughnut, Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement } from 'chart.js';
+import { Doughnut, Bar, Line } from 'react-chartjs-2';
 import useDashboard from '../hooks/useDashboard';
 
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement);
 
 export default function Dashboard() {
   const {
@@ -12,9 +12,10 @@ export default function Dashboard() {
     metrics,
     categoryChartData,
     dailyChartData,
+    categoryTrendChartData,
     topUpvoted,
     clusterInsight,
-    rankedIssues
+    trendInsight
   } = useDashboard();
 
   if (loading) {
@@ -59,9 +60,7 @@ export default function Dashboard() {
       {/* Section 2: AI Cluster Insight */}
       <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-lg">🧠</span>
-          <span className="font-semibold text-sm text-emerald-900 uppercase tracking-wide">AI Pattern Detection</span>
-          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full ml-auto">Gemini 2.5 Pro</span>
+          <span className="font-semibold text-sm text-emerald-900 uppercase tracking-wide">Pattern Detection</span>
         </div>
         
         {aiLoading ? (
@@ -75,39 +74,31 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Section 3: AI Priority Ranking */}
+      {/* Section 3: AI Trend Insight */}
       <div className="bg-white border border-slate-200 rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-lg">🎯</span>
-          <span className="font-bold text-slate-800">Top Priority Issues</span>
-          <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full ml-auto">AI Ranked</span>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-lg">📈</span>
+          <h3 className="font-bold text-slate-800 text-sm">Issue Trends — Last 14 Days</h3>
         </div>
-        
+
         {aiLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => <div key={i} className="animate-pulse bg-slate-100 rounded h-16 w-full" />)}
-          </div>
-        ) : rankedIssues.length > 0 ? (
-          <div className="space-y-4">
-            {rankedIssues.map(item => (
-              <div key={item.id} className="flex gap-3 items-start">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5
-                  ${item.rank === 1 ? 'bg-red-500' : item.rank === 2 ? 'bg-amber-500' : 'bg-blue-500'}`}>
-                  #{item.rank}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-bold text-sm text-slate-800 truncate">{item.issue.title}</h4>
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${item.issue.severity === 'critical' ? 'bg-red-500' : item.issue.severity === 'moderate' ? 'bg-amber-500' : 'bg-green-500'}`} />
-                  </div>
-                  <p className="text-xs text-slate-500 leading-relaxed">{item.reason}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="animate-pulse bg-slate-100 rounded h-4 w-3/4 mb-4 mt-1" />
+        ) : trendInsight ? (
+          <p className="text-xs text-slate-600 leading-relaxed mb-4 mt-1">{trendInsight}</p>
         ) : (
-          <div className="text-sm text-slate-500">No open issues to rank.</div>
+          <p className="text-xs text-slate-400 mb-4 mt-1">Not enough trend data yet.</p>
         )}
+
+        <div className="h-56 relative w-full">
+          <Line
+            data={categoryTrendChartData}
+            options={{
+              maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+              scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } }
+            }}
+          />
+        </div>
       </div>
 
       {/* Section 4: Charts */}

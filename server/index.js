@@ -146,55 +146,59 @@ Respond in 2–3 sentences written for a public civic dashboard. Be specific abo
       
       res.status(200).json({ insight: responseText.trim() });
     } catch (error) {
-      console.error('Error in cluster-insight:', error);
       if (error.message && error.message.includes('429')) {
         return res.status(429).json({ error: 'AI quota exceeded. Please try again later.' });
       }
+      console.error('Error in cluster-insight:', error);
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.post('/api/priority-ranking', async (req, res) => {
+  // Replaces /api/priority-ranking
+  app.post('/api/trend-insight', async (req, res) => {
     try {
       const aiModel = getModel();
-      const { issues } = req.body;
+      const { categoryTrends, criticalOpenCount, totalOpenCount } = req.body;
       
-      if (!issues || !Array.isArray(issues) || issues.length === 0) {
-        return res.status(400).json({ error: 'issues array is required' });
+      if (!categoryTrends || !Array.isArray(categoryTrends) || categoryTrends.length === 0) {
+        return res.status(200).json({ insight: null });
       }
 
-      const limitedIssues = issues.slice(0, 20);
-      const issueList = limitedIssues.map((i, idx) => `${idx + 1}. [${i.severity}] ${i.title} — ${i.upvotes} upvotes — reported ${i.created_at} — ${i.urgency_reason}`).join('\n');
+      const summaryLines = categoryTrends
+        .filter(t => t.last7Days !== t.previous7Days)
+        .map(t => {
+          const change = t.last7Days - t.previous7Days;
+          const percent = t.previous7Days === 0 ? '+100%' : `${change > 0 ? '+' : ''}${Math.round((change / t.previous7Days) * 100)}%`;
+          return `${t.category}: ${t.last7Days} reports this week vs ${t.previous7Days} last week (${percent})`;
+        });
 
-      const prompt = `You are a priority triage system for civic infrastructure issues.
+      if (summaryLines.length === 0) {
+        return res.status(200).json({ insight: null });
+      }
 
-Open issues requiring attention:
-${issueList}
+      const trendSummary = summaryLines.join('\n');
 
-Select the top 3 issues that require the most urgent action. Consider:
-- Critical severity outweighs moderate and minor
-- High upvote count signals community impact
-- Older unresolved issues should be prioritised over recent ones
-- Infrastructure failures (water, electrical) outweigh cosmetic issues
+      const prompt = `You are a civic data analyst for a community issue reporting platform.
 
-Return valid JSON only — no markdown, no explanation:
-[
-  { "rank": 1, "id": "issue_id", "reason": "one sentence explaining why this is top priority" },
-  { "rank": 2, "id": "issue_id", "reason": "one sentence" },
-  { "rank": 3, "id": "issue_id", "reason": "one sentence" }
-]`;
+Weekly trend data:
+${trendSummary}
+
+Currently ${criticalOpenCount} critical issues are open out of ${totalOpenCount} total open issues.
+
+Write one insight for a public dashboard, 2 sentences maximum. Reference the specific
+numbers shown above. Identify the most significant rising or falling trend and what it
+might suggest (e.g. seasonal cause, infrastructure aging, response improvement). Do not
+invent any numbers not provided above. Do not use markdown or bullet points.`;
 
       const result = await aiModel.generateContent(prompt);
       const responseText = result.response.text();
-      const cleanJson = responseText.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
       
-      res.status(200).json({ rankings: parsed });
+      res.status(200).json({ insight: responseText.trim() });
     } catch (error) {
-      console.error('Error in priority-ranking:', error);
       if (error.message && error.message.includes('429')) {
         return res.status(429).json({ error: 'AI quota exceeded. Please try again later.' });
       }
+      console.error('Error in trend-insight:', error);
       res.status(500).json({ error: error.message });
     }
   });
