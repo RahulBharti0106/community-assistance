@@ -110,7 +110,7 @@ export default function useDashboard() {
     pothole: 'Pothole', streetlight: 'Streetlight',
     water_leak: 'Water Leak', waste: 'Waste', other: 'Other'
   };
-  const CATEGORY_COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#22c55e', '#8b5cf6'];
+  const CATEGORY_COLORS = ['#dc2626', '#d97706', '#1d4ed8', '#15803d', '#6b7280'];
   const categoryChartData = {
     labels: Object.values(CATEGORY_LABELS),
     datasets: [{
@@ -130,7 +130,7 @@ export default function useDashboard() {
     datasets: [{
       label: 'Issues Reported',
       data: last7DaysData.map(day => issues.filter(i => i.created_at.startsWith(day)).length),
-      backgroundColor: '#3b82f6',
+      backgroundColor: '#1d4ed8',
       borderRadius: 6
     }]
   };
@@ -147,8 +147,8 @@ export default function useDashboard() {
   });
 
   const CATEGORY_LINE_COLORS = {
-    pothole: '#ef4444', streetlight: '#f59e0b',
-    water_leak: '#3b82f6', waste: '#22c55e', other: '#8b5cf6'
+    pothole: '#dc2626', streetlight: '#d97706',
+    water_leak: '#1d4ed8', waste: '#15803d', other: '#6b7280'
   };
 
   const categoryTrendChartData = {

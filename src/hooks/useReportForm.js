@@ -72,7 +72,7 @@ export default function useReportForm() {
       
       setIsAnalyzing(false);
     } catch (err) {
-      setError("Could not analyze image. Please fill in the details manually.");
+      setError("Couldn't read the photo automatically. Fill in the details below.");
       setIsAnalyzing(false);
     }
   };
@@ -194,7 +194,7 @@ export default function useReportForm() {
       }]).select().single();
 
       if (insertError) {
-        setError("Failed to submit report. Please try again.");
+        setError("Report didn't save. Check your connection and try again.");
         setIsSubmitting(false);
         return;
       }
@@ -205,7 +205,7 @@ export default function useReportForm() {
       runDuplicateCheck(insertedIssue.id, form.title, form.description, finalLat, finalLng);
 
     } catch (err) {
-      setError("Failed to submit report. Please try again.");
+      setError("Report didn't save. Check your connection and try again.");
       setIsSubmitting(false);
     }
   };

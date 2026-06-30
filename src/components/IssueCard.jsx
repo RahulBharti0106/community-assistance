@@ -7,22 +7,28 @@ function timeAgo(dateStr) {
 }
 
 export default function IssueCard({ issue, onSelect }) {
+  const statusColorVar = `var(--ch-${issue.status === 'resolved' ? 'resolved' : issue.severity})`;
+
   return (
     <div 
       onClick={() => onSelect(issue)}
-      className="flex gap-3 p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
+      className="flex gap-3 p-4 bg-[var(--ch-surface)] border border-[var(--ch-border)] border-l-4 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
+      style={{ borderLeftColor: statusColorVar }}
     >
       {issue.image_url && (
         <img src={issue.image_url} alt={issue.title} className="w-16 h-16 rounded object-cover flex-shrink-0" />
       )}
       <div className="flex-1 min-w-0 flex flex-col justify-between">
         <div>
-          <h3 className="font-bold text-slate-800 truncate text-sm">{issue.title}</h3>
+          <h3 className="font-bold text-[var(--ch-ink)] truncate text-sm">{issue.title}</h3>
           <div className="flex gap-2 items-center mt-1">
-            <span className="text-[10px] font-medium bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded uppercase">
+            <span className="text-[10px] font-medium bg-slate-100 text-[var(--ch-ink)] px-1.5 py-0.5 rounded uppercase">
               {issue.category?.replace('_', ' ')}
             </span>
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${issue.severity === 'critical' ? 'bg-red-500' : issue.severity === 'moderate' ? 'bg-amber-500' : 'bg-green-500'}`}></span>
+            <span 
+              className="w-2 h-2 rounded-full flex-shrink-0" 
+              style={{ backgroundColor: statusColorVar }}
+            ></span>
           </div>
         </div>
         <div className="text-xs text-slate-500 truncate mt-1">
@@ -30,10 +36,10 @@ export default function IssueCard({ issue, onSelect }) {
         </div>
       </div>
       <div className="flex flex-col items-end justify-between text-xs text-slate-500 flex-shrink-0">
-        <div className="bg-slate-100 px-2 py-1 rounded text-slate-600 font-medium">
+        <div className="bg-slate-100 px-2 py-1 rounded text-[var(--ch-ink)] font-medium tabular-nums">
           👍 {issue.upvotes || 0}
         </div>
-        <div>
+        <div className="tabular-nums">
           {timeAgo(issue.created_at)}
         </div>
       </div>

@@ -13,8 +13,8 @@ L.Icon.Default.mergeOptions({
 });
 
 const getSeverityColor = (issue) => {
-  if (issue.status === 'resolved') return '#94a3b8';
-  return issue.severity === 'critical' ? '#ef4444' : issue.severity === 'moderate' ? '#f59e0b' : '#22c55e';
+  if (issue.status === 'resolved') return '#6b7280';
+  return issue.severity === 'critical' ? '#dc2626' : issue.severity === 'moderate' ? '#d97706' : '#15803d';
 };
 
 const severityIcon = (issue) => L.divIcon({
@@ -33,7 +33,7 @@ const clusterIcon = (count, hasCritical) => L.divIcon({
   className: '',
   html: `<div style="
     width: 32px; height: 32px; border-radius: 50%;
-    background: ${hasCritical ? '#ef4444' : '#3b82f6'};
+    background: ${hasCritical ? '#dc2626' : '#1d4ed8'};
     border: 3px solid white;
     box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     display: flex; align-items: center; justify-content: center;
@@ -121,8 +121,8 @@ export default function IssueMap({ flyToIssue, onFlyComplete }) {
 
   if (loading) {
     return (
-      <div style={{ height: 'calc(100vh - 120px)', width: '100%' }} className="flex items-center justify-center">
-        Loading map…
+      <div style={{ height: 'calc(100vh - 120px)', width: '100%' }} className="flex items-center justify-center text-slate-500 font-medium">
+        Loading reported issues…
       </div>
     );
   }
@@ -150,7 +150,7 @@ export default function IssueMap({ flyToIssue, onFlyComplete }) {
         }
       `}</style>
 
-      <div className="p-2 bg-white border-b border-slate-200">
+      <div className="p-2 bg-[var(--ch-surface)] border-b border-[var(--ch-border)]">
         <select 
           value={dropdownValue} 
           onChange={(e) => {
@@ -162,7 +162,7 @@ export default function IssueMap({ flyToIssue, onFlyComplete }) {
             }
             setDropdownValue("");
           }}
-          className="w-full p-2 rounded-lg border border-slate-300 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full p-2 rounded-lg border border-[var(--ch-border)] text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--ch-accent)] text-[var(--ch-ink)] font-medium"
         >
           <option value="" disabled>— Jump to a complaint —</option>
           {sortedValidIssues.map(issue => (
@@ -222,10 +222,10 @@ export default function IssueMap({ flyToIssue, onFlyComplete }) {
           })}
         </MapContainer>
 
-        <div className={`absolute bottom-0 left-0 right-0 max-h-[60vh] overflow-y-auto bg-white rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,0.15)] z-[1000] bottom-sheet ${sheetCluster ? 'open' : ''}`}>
-          <div className="flex justify-between items-center p-4 border-b border-slate-100 sticky top-0 bg-white z-10">
-            <h3 className="font-bold text-slate-800 text-sm">{sheetCluster?.issues.length} Issues in this area</h3>
-            <button onClick={() => setSheetCluster(null)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors">
+        <div className={`absolute bottom-0 left-0 right-0 max-h-[60vh] overflow-y-auto bg-[var(--ch-surface)] rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,0.15)] z-[1000] bottom-sheet ${sheetCluster ? 'open' : ''}`}>
+          <div className="flex justify-between items-center p-4 border-b border-[var(--ch-border)] sticky top-0 bg-[var(--ch-surface)] z-10">
+            <h3 className="font-semibold text-[var(--ch-ink)] text-sm tracking-tight">{sheetCluster?.issues.length} Issues in this area</h3>
+            <button onClick={() => setSheetCluster(null)} className="p-1 rounded-full text-[var(--ch-ink)] opacity-50 hover:opacity-100 bg-slate-100 hover:bg-slate-200 transition-colors">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
             </button>
           </div>
@@ -236,14 +236,14 @@ export default function IssueMap({ flyToIssue, onFlyComplete }) {
                    <span className="w-3 h-3 rounded-full inline-block shadow-sm" style={{ background: getSeverityColor(issue) }}></span>
                 </div>
                 <div className="flex-1 min-w-0">
-                   <h4 className="font-bold text-sm text-slate-800">{issue.title}</h4>
+                   <h4 className="font-bold text-[var(--ch-ink)] text-sm tracking-tight">{issue.title}</h4>
                    <p className="text-xs text-slate-500 truncate mt-0.5">{issue.address}</p>
                    <button 
                      onClick={() => {
                        setSheetCluster(null);
                        selectIssue(issue);
                      }}
-                     className="text-xs text-blue-600 mt-1.5 font-medium hover:underline text-left"
+                     className="text-xs text-[var(--ch-accent)] mt-1.5 font-semibold hover:underline text-left tracking-wide uppercase"
                    >
                      View details &rarr;
                    </button>
